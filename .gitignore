@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+
+# Editors
+.idea/
+.vscode/
+
+# Python (also covered per-package in backend/.gitignore, kept here as a
+# repo-wide backstop for any future package)
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.venv/
+
+# Secrets
+.env
+.env.*
+!.env.example

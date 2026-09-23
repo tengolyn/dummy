@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+
+# Secrets: HF_TOKEN lives here. Never commit it.
+.env
+.env.*
+!.env.example
+.pytest_cache/
+.ruff_cache/
+*.egg-info/

@@ -1,0 +1,21 @@
+{
+  "manifest_version": "1.0",
+  "model_alias": "sarvam-translate",
+  "base_repo": "sarvamai/sarvam-translate",
+  "task": "translation",
+  "target_hardware": "mps",
+  "precision": "q4_k_m",
+  "engine": {
+    "name": "llama.cpp",
+    "mode": "daemon",
+    "binary_or_env": ".indic-runner/bin/llama-server"
+  },
+  "paths": {
+    "artifacts_dir": ".indic-runner/models/sarvam-translate-gguf",
+    "tokenizer_dir": ".indic-runner/models/sarvam-translate-gguf"
+  },
+  "runtime_parameters": {
+    "max_batch_size": 32,
+    "context_length": 8192
+  }
+}

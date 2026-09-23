@@ -1,0 +1,23 @@
+[project]
+name = "indic-runner"
+version = "0.1.0"
+description = "Model- and hardware-agnostic execution framework for Indic AI workloads"
+requires-python = ">=3.10"
+dependencies = [
+    "huggingface-hub>=1.32.0",
+]
+
+[project.scripts]
+indic-runner = "indic_runner.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["indic_runner*", "schemas*"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
