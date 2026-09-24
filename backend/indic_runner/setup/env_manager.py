@@ -67,8 +67,11 @@ def python_path(name: str) -> Path:
     return base / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
 
 
-def _fingerprint(packages: tuple[str, ...], index: str | None) -> str:
-    payload = json.dumps({"packages": sorted(packages), "index": index}, sort_keys=True)
+def _fingerprint(packages: tuple[str, ...], index: str | None, overlay: tuple[str, ...] = ()) -> str:
+    payload = {"packages": sorted(packages), "index": index}
+    if overlay:  # keeps fingerprints of envs without an overlay unchanged
+        payload["overlay"] = sorted(overlay)
+    payload = json.dumps(payload, sort_keys=True)
     return hashlib.sha256(payload.encode()).hexdigest()[:16]
 
 
@@ -96,14 +99,21 @@ def ensure_env(
     accelerator: str = "cpu",
     cuda_version: str | None = None,
     python_version: str | None = None,
+    overlay: tuple[str, ...] = (),
 ) -> Path:
     """Create (or reuse) an isolated env and return its interpreter path.
+
+    ``overlay`` packages are force-reinstalled with --no-deps after everything
+    else. It exists for one case: a library whose dependency check wants the
+    GUI build of a package (opencv-contrib-python) while the host lacks the
+    system libraries that build links against (libGL). The GUI dist stays
+    installed for the metadata check; the headless build's files replace it.
 
     Idempotent: a marker file records the resolved package set and torch index,
     so a repeat call with the same inputs is a no-op.
     """
     index = torch_index_for(accelerator, cuda_version)
-    want = _fingerprint(packages, index)
+    want = _fingerprint(packages, index, overlay)
 
     marker = _read_marker(name)
     interpreter = python_path(name)
@@ -135,6 +145,12 @@ def ensure_env(
         _run(
             [uv, "pip", "install", "--python", str(interpreter), *rest],
             f"installing packages into {name!r}",
+        )
+
+    if overlay:
+        _run(
+            [uv, "pip", "install", "--python", str(interpreter), "--reinstall", "--no-deps", *overlay],
+            f"overlaying packages into {name!r}",
         )
 
     (base / _MARKER).write_text(

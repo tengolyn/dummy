@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project status
 
 **Phase 1 (`setup`, the AOT compiler) is implemented and tested** under `backend/indic_runner/setup/`.
-Phase 2 (`run`, the streaming VM) is still stubs under `backend/indic_runner/runtime/`.
+Phase 2 (`run`, the streaming VM) is implemented under `backend/indic_runner/runtime/`: llama.cpp and vLLM daemons plus stdio workers for ctranslate2/transformers, tested against fakes only. **No OCR worker yet** (surya/paddleocr/easyocr/transformers-OCR raise a clear `EngineError`), and no real-model run has been done. Run: `indic-runner run --model <alias> --dataset x.jsonl` (OCR needs `--ocr-variant`); output goes to `runs/<run_id>/results.json`; `--resume <run_id>` continues.
 `docs/architecture.md` is the design source of truth, with two corrections noted below.
 
 ## Commands
@@ -33,6 +33,10 @@ loads it at import, so `hf_token()` is available everywhere with no wiring — i
 profiler's `HfApi` and `snapshot_download`. Real environment variables take precedence over the file,
 and empty values are skipped so a copied blank placeholder cannot mask a working token. Never print
 the token: `cli._auth_line()` reports only whether one is configured and from which file.
+
+### Third correction: "in-process" engines are stdio workers
+
+The orchestrator cannot import torch/CTranslate2 (isolated envs), so in-process engines run as one long-lived worker under the env's interpreter, speaking JSON lines over stdio (`runtime/engines/worker_engine.py`, `runtime/workers/`). The env name is `manifest.engine.binary_or_env` (setup stores the engine name there).
 
 ### Two corrections to docs/architecture.md, already reflected in the code
 

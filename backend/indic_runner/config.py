@@ -73,6 +73,7 @@ DIRS = {
     "envs": BASE_DIR / "envs",           # Isolated Python virtualenvs
     "models": BASE_DIR / "models",       # Compiled inference-ready weights
     "manifests": BASE_DIR / "manifests", # JSON execution contracts
+    "runs": BASE_DIR / "runs",           # Per-run partial rows and final results
 }
 
 

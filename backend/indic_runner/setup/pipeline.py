@@ -8,11 +8,13 @@ from pathlib import Path
 
 from indic_runner.config import DIRS, hf_token
 from indic_runner.models.registry import MODEL_REGISTRY
-from indic_runner.setup import binary_manager
+from indic_runner.setup import binary_manager, env_manager
 from indic_runner.setup.artifact_compiler import (
+    ENV_OVERLAYS,
     compiler_for,
     model_dir,
     prune_orphan_sources,
+    runtime_env,
     validate_artifact_format,
 )
 from indic_runner.setup.decision_matrix import ExecutionPlan, select_plan
@@ -204,6 +206,9 @@ def run_setup(
 
     bundle = None
     binary_or_env = plan.engine
+    env_spec = runtime_env(plan)
+    if env_spec:  # in-process engines run under a named isolated env
+        binary_or_env = env_spec[0]
     library_dir = None
     artifact_source = None
 
@@ -231,6 +236,10 @@ def run_setup(
             plan, resolved.alias, bundle, hw.accelerator, trusted=resolved.is_registry
         )
         artifacts = compiler.ensure(plan, model)
+        if env_spec:
+            env_manager.ensure_env(
+                *env_spec, accelerator=hw.accelerator, overlay=ENV_OVERLAYS.get(env_spec[0], ())
+            )
         artifacts_dir = artifacts.artifacts_dir
         tokenizer_dir = artifacts.tokenizer_dir
         # A compiler evicts the source it consumed; this clears one abandoned

@@ -34,6 +34,57 @@ GGUF_ENV = ("gguf-convert", ("torch", "numpy", "sentencepiece", "transformers", 
 CT2_ENV = ("ct2-convert", ("torch", "ctranslate2", TRANSFORMERS_PIN, "sentencepiece"))
 OCR_ENV = ("ocr-runtime", ("torch", "torchvision", "transformers", "pillow"))
 
+# Run-phase envs for the in-process engines, keyed by (task, engine). The pins
+# conflict, which is why they are separate: IndicTrans2's remote code and
+# surya 0.6 need transformers<5, while Chandra (qwen3_5) and Bodhan's IndicOCR
+# need >=5.x. The CTranslate2 worker reuses the conversion env.
+TRANSLATE_ENV = (
+    "tx-translate",
+    ("torch", TRANSFORMERS_PIN, "sentencepiece", "protobuf", "accelerate", "IndicTransToolkit"),
+)
+OCR_HF_ENV = (
+    "ocr-hf",
+    ("torch", "torchvision", "transformers>=5.7", "accelerate>=1.1", "pillow", "numpy",
+     "huggingface_hub>=1.0", "chandra-ocr[hf]"),
+)
+OPENCV_VERSION = "4.10.0.84"
+# surya-ocr 0.6.x is the generation that used the roster's vikp/surya_rec2.
+# Its config classes break on transformers>=4.5x (KeyError: 'encoder'), so it
+# gets a 2024-era pin. Its opencv-python needs libxcb, absent on servers, so the
+# headless build of the same version is overlaid (see ENV_OVERLAYS).
+OCR_SURYA_ENV = (
+    "ocr-surya",
+    ("torch", "surya-ocr==0.6.13", "transformers==4.45.2", "tokenizers<0.21", "pillow<11",
+     f"opencv-python=={OPENCV_VERSION}"),
+)
+OCR_SURYA_OVERLAY = (f"opencv-python-headless=={OPENCV_VERSION}",)
+# paddlex's dependency check wants the opencv-contrib-python dist, whose cv2
+# links libGL (absent on servers and containers); the headless build of the same
+# version is overlaid so the import works while the check still passes.
+OCR_PADDLE_ENV = (
+    "ocr-paddle",
+    ("paddlepaddle", "paddleocr", "pillow", f"opencv-contrib-python=={OPENCV_VERSION}"),
+)
+OCR_PADDLE_OVERLAY = (f"opencv-contrib-python-headless=={OPENCV_VERSION}",)
+
+RUNTIME_ENVS = {
+    ("translation", "ctranslate2"): CT2_ENV,
+    ("translation", "transformers"): TRANSLATE_ENV,
+    ("ocr", "transformers"): OCR_HF_ENV,
+    ("ocr", "surya"): OCR_SURYA_ENV,
+    ("ocr", "paddleocr"): OCR_PADDLE_ENV,
+    ("ocr", "easyocr"): OCR_ENV,
+}
+
+
+ENV_OVERLAYS = {OCR_PADDLE_ENV[0]: OCR_PADDLE_OVERLAY, OCR_SURYA_ENV[0]: OCR_SURYA_OVERLAY}
+
+
+def runtime_env(plan: ExecutionPlan) -> tuple[str, tuple[str, ...]] | None:
+    """(env name, packages) an in-process plan runs in; None for daemons."""
+    return RUNTIME_ENVS.get((plan.task, plan.engine))
+
+
 QUANT_TYPE = "Q4_K_M"
 
 
